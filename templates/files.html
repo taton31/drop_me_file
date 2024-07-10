@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- <title>Files</title> -->
+</head>
+<body>
+    <h1>Files</h1>
+    <table>
+        <tr>
+            <th>Имя файла</th>
+            <th>Размер</th>
+            <th>Скачать</th>
+        </tr>
+        {% for file in files %}
+        <tr>
+            <td>{{ file.name }}</td>
+            <td>{{ file.size }}</td>
+            <td>
+                <a href="/{{ uid }}/download/{{ file.name }}">Download</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/{{ uid }}/download_all">Download All</a>
+</body>
+</html>
