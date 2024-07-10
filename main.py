@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
 from typing import List, Dict
 from fastapi.templating import Jinja2Templates
@@ -43,9 +43,9 @@ async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile
 
     background_tasks.add_task(delete_files_after_timeout, uid)
     
-    return RedirectResponse(f"/{uid}")
+    return RedirectResponse(f"/{uid}", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.post("/{uid}")
+@app.get("/{uid}")
 async def get_files(uid: str, request: Request):
     if uid not in storage:
         raise HTTPException(status_code=404, detail="Files not found or expired")
