@@ -60,7 +60,7 @@ async def download_file(uid: str, filename: str):
 
     file_content = storage[uid][filename]
     file_content.seek(0)
-    return StreamingResponse(file_content, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={filename}"})
+    return StreamingResponse(file_content, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={filename.encode('utf-8')}"})
 
 @app.get("/{uid}/download_all")
 async def download_all_files(uid: str):
