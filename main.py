@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Request, status
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Request, status, Form
 from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
 from typing import List, Dict
 from fastapi.templating import Jinja2Templates
@@ -33,13 +33,14 @@ def pretty_file_size(size_bytes):
 
 
 @app.post("/upload/")
-async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...)):
+async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), text_value: str = Form(...)):
     uid = str(randint(1000, 9999))
-    storage[uid] = {}
+    storage[uid] = {'files': {}, 'text_value': ''}
 
     for file in files:
         file_content = BytesIO(await file.read())
-        storage[uid][file.filename] = file_content
+        storage[uid]['files'][file.filename] = file_content
+        storage[uid]['text_value'] = text_value
 
     background_tasks.add_task(delete_files_after_timeout, uid)
     
@@ -50,15 +51,16 @@ async def get_files(uid: str, request: Request):
     if uid not in storage:
         raise HTTPException(status_code=404, detail="Files not found or expired")
     
-    files = [{"name": name, "size": pretty_file_size(len(content.getvalue()))} for name, content in storage[uid].items()]
-    return templates.TemplateResponse("files.html", {"request": request, "files": files, "uid": uid})
+    files = [{"name": name, "size": pretty_file_size(len(content.getvalue()))} for name, content in storage[uid]['files'].items()]
+    text_value = storage[uid]['text_value']
+    return templates.TemplateResponse("files.html", {"request": request, "files": files, "uid": uid, "text_value": text_value})
 
 @app.get("/{uid}/download/{filename}")
 async def download_file(uid: str, filename: str):
-    if uid not in storage or filename not in storage[uid]:
+    if uid not in storage or filename not in storage[uid]['files']:
         raise HTTPException(status_code=404, detail="File not found or expired")
 
-    file_content = storage[uid][filename]
+    file_content = storage[uid]['files'][filename]
     file_content.seek(0)
 
 
@@ -73,7 +75,7 @@ async def download_all_files(uid: str):
 
     zip_content = BytesIO()
     with zipfile.ZipFile(zip_content, 'w') as zipf:
-        for filename, file_content in storage[uid].items():
+        for filename, file_content in storage[uid]['files'].items():
             file_content.seek(0)
             zipf.writestr(filename, file_content.read())
     zip_content.seek(0)
@@ -85,7 +87,8 @@ async def main():
         <body>
         <form action="/upload/" enctype="multipart/form-data" method="post">
         <input name="files" type="file" multiple id="fileInput">
-        <input type="submit" style="display: none" id="submit">
+        <input type="text", name="text_value">
+        <input type="submit" id="submit">
         </form>
         </body>
         <script>
